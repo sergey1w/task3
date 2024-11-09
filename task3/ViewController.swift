@@ -12,6 +12,8 @@ class ViewController: UIViewController {
     private let squareView = UIView(frame: .zero)
     
     private let slider = UISlider()
+    
+    private let safeAreView = UIView()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -21,30 +23,29 @@ class ViewController: UIViewController {
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-
-        if squareView.transform.isIdentity {
-            
-            let leftMargin = view.directionalLayoutMargins.leading
-            let rigthMargin = view.directionalLayoutMargins.trailing
-            let topMargin = view.directionalLayoutMargins.top
         
-            squareView.center.x = squareView.bounds.midX + leftMargin
-            squareView.center.y = squareView.bounds.midY + topMargin * 2
-            
-            
-            slider.bounds.size.width = view.bounds.width - leftMargin - rigthMargin
-            slider.center.x = view.center.x
-            slider.center.y = squareView.frame.maxY + squareView.bounds.midY + C.sliderTopSpace
-        }
+        safeAreView.frame = view.safeAreaLayoutGuide.layoutFrame
+        
+        let leftMargin = view.directionalLayoutMargins.leading
+        let rigthMargin = view.directionalLayoutMargins.trailing
+        let topMargin = view.directionalLayoutMargins.top
+        
+        let boundingRectHeight = (C.squareSize.width * C.finalScale) * sqrt(2)
+        
+        
+        squareView.center.x = calculateSquareCenterX(
+            value: CGFloat(slider.value),
+            finalSquareWidth: squareView.frame.width
+        )
+        squareView.center.y = boundingRectHeight / 2 + topMargin
+        
+        slider.bounds.size.width = view.bounds.width - leftMargin - rigthMargin
+        slider.center.x = view.center.x
+        slider.center.y = squareView.frame.maxY + slider.bounds.midY + C.sliderTopSpace
     }
     
     @objc private func sliderValueChanged(sender: UISlider) {
         let value = CGFloat(sender.value)
-        
-        squareView.center.x = calculateSquareCenterX(
-            value: value,
-            finalSquareWidth: squareView.frame.width
-        )
         
         let scale = calculateSquareScale(value: value)
         let rotation = calculateSquareRotation(value: value)
@@ -105,7 +106,7 @@ class ViewController: UIViewController {
         transformAnimation.toValue = transformEnd
         
         
-        let duration: CFTimeInterval = 0.25
+        let duration: CFTimeInterval = C.animationDuration
         let animationGroup = CAAnimationGroup()
         animationGroup.animations = [positionAnimation, transformAnimation]
         animationGroup.duration = duration
@@ -121,14 +122,16 @@ class ViewController: UIViewController {
 // MARK: UI
 extension ViewController {
     private func setup() {
+        view.addSubview(safeAreView)
+        safeAreView.backgroundColor = .brown.withAlphaComponent(0.6)
         view.addSubview(squareView)
         view.addSubview(slider)
-        squareView.bounds.size = C.squareSize
         setupSquareView()
         setupSliderView()
     }
     
     private func setupSquareView() {
+        squareView.bounds.size = C.squareSize
         squareView.backgroundColor = C.squareBackgroundColor
         squareView.layer.cornerRadius = C.squareCornerRadius
     }
@@ -137,7 +140,7 @@ extension ViewController {
         slider.minimumValue = 0
         slider.maximumValue = 1
         
-        slider.addTarget(self, action: #selector(sliderTouchUp), for: .touchUpInside)
+        slider.addTarget(self, action: #selector(sliderTouchUp), for: [.touchUpInside, .touchUpOutside])
         slider.addTarget(self, action: #selector(sliderValueChanged(sender:)), for: .valueChanged)
     }
 }
@@ -153,5 +156,6 @@ private extension ViewController {
         static let finalRotation: CGFloat = .pi/2
         
         static let sliderTopSpace: CGFloat = 8
+        static let animationDuration: TimeInterval = 0.25
     }
 }
